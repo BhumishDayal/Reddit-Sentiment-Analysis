@@ -1,0 +1,953 @@
+{
+  "name": "n8n_Reddit_Sentiment_Analysis",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "de6ec7c6-1963-4f45-a2e5-4420f77c5a03",
+      "name": "When clicking ‘Execute workflow’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        -620,
+        320
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "url": "=https://api.brightdata.com/datasets/v3/snapshot/s_mbtsa7xhm9v2pdx3l",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer { your api key}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a333d51d-5cbb-4167-9cc4-74f4b8cbd240",
+      "name": "Get data",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        240,
+        240
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "cba64afb-644f-4fb2-8f47-f5f0926a31a6",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "ready"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "ready"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "36e3dcef-e634-4cdc-a1df-536b3cfbc552",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "running"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "running"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bd444867-2170-42f6-8bd8-7bc329e1a010",
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        20,
+        320
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brightdata.com/datasets/v3/trigger",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "dataset_id",
+              "value": "gd_lvz8ah06191smkebj4"
+            },
+            {
+              "name": "include_errors",
+              "value": "true"
+            },
+            {
+              "name": "type",
+              "value": "discover_new"
+            },
+            {
+              "name": "discover_by",
+              "value": "keyword"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer { your api key}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "[\n \n  {\n    \"keyword\": \"WWDC25\",\n    \"date\": \"Past month\",\n    \"num_of_posts\": 100,\n    \"sort_by\": \"New\"\n  }\n]",
+        "options": {}
+      },
+      "id": "224d6cb8-0803-455c-b4d6-0d398d2f8f17",
+      "name": "scrap reddit",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -400,
+        320
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "amount": 15
+      },
+      "id": "db1a7b1e-418b-4e85-b960-8778137090ea",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        240,
+        440
+      ],
+      "webhookId": "f17e6010-2745-4e37-a4e7-d6f73f83c2aa",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "inputText": "=Post title :{{ $json.title }}\nPost description : {{ $json.description || \" \"}}",
+        "categories": {
+          "categories": [
+            {
+              "category": "WWDC events",
+              "description": "=This includes all events that relate to the company APPLE and the latest events in WWDC. This excludes anything that does not refer to apple as a company "
+            },
+            {
+              "category": "other",
+              "description": "Any post that does not include APPLE company or related products."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "55b4fa9e-2837-4a52-853d-a75a96944c6f",
+      "name": "Text Classifier",
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "position": [
+        720,
+        440
+      ],
+      "typeVersion": 1.1,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "id": "d8e7d5ad-6e78-4765-993c-5c9a8ac20351",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        740,
+        620
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "72f15471-3e6a-4250-b18e-79e884d8d411",
+              "name": "post_id",
+              "type": "string",
+              "value": "={{ $json.post_id }}"
+            },
+            {
+              "id": "4c66a57a-79ec-4052-b332-822860b874db",
+              "name": "url",
+              "type": "string",
+              "value": "={{ $json.url }}"
+            },
+            {
+              "id": "dc42a5d6-d601-422d-b4b1-48bf3a0e9840",
+              "name": "user_posted",
+              "type": "string",
+              "value": "={{ $json.user_posted }}"
+            },
+            {
+              "id": "842f3fc9-c2da-4eb6-8640-9b101531ec75",
+              "name": "title",
+              "type": "string",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "id": "0a52a894-955d-45c0-8bc0-33a61bb562ef",
+              "name": "description",
+              "type": "string",
+              "value": "={{ $json.description }}"
+            },
+            {
+              "id": "0a7e5448-ffff-4f3c-a108-fae1974433be",
+              "name": "num_comments",
+              "type": "number",
+              "value": "={{ $json.num_comments }}"
+            },
+            {
+              "id": "0d6bdbb2-4735-4103-822f-6e3dcd0d0ff2",
+              "name": "comments",
+              "type": "array",
+              "value": "={{ $json.comments }}"
+            },
+            {
+              "id": "82d7814f-98a5-4b0f-aeda-e68321548bce",
+              "name": "community_description",
+              "type": "string",
+              "value": "={{ $json.community_description }}"
+            },
+            {
+              "id": "1c75b988-9ac6-4715-bbdd-c80856b878aa",
+              "name": "community_name",
+              "type": "string",
+              "value": "={{ $json.community_name }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "34b5f377-bee0-47ad-8189-8fd242c56cb1",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1080,
+        340
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-lite",
+        "options": {}
+      },
+      "id": "1d91715d-b5a9-4b4b-85ec-eb27befe02ff",
+      "name": "Google Gemini Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        1600,
+        560
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "comments",
+        "options": {}
+      },
+      "id": "435c4ec7-f244-4ddb-b214-7964f4dc27ae",
+      "name": "Split Out",
+      "type": "n8n-nodes-base.splitOut",
+      "position": [
+        1240,
+        340
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "e04cc5f2-cf5b-4e07-8461-7175de08b407",
+      "name": "Loop Over Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        500,
+        240
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a7b1cb71-adcc-4b7d-a80d-a2f3fecf39e6",
+              "name": "title",
+              "type": "string",
+              "value": "={{ $('Loop Over Items').first().json.title }}"
+            },
+            {
+              "id": "d6203ecb-3c36-41a5-b3c9-13b04a960317",
+              "name": "sentimentAnalysis",
+              "type": "string",
+              "value": "={{ $json.sentimentAnalysis.category }}"
+            },
+            {
+              "id": "379bed7b-f754-4a61-a7e6-bfd7eb2c4430",
+              "name": "post_id",
+              "type": "string",
+              "value": "={{ $('Loop Over Items').first().json.post_id }}"
+            },
+            {
+              "id": "2eb5a2b7-0c37-4162-ad5c-b63b01343161",
+              "name": "url",
+              "type": "string",
+              "value": "={{ $('Loop Over Items').first().json.url }}"
+            },
+            {
+              "id": "cf66442b-5140-403d-a309-8714a19d742e",
+              "name": "description",
+              "type": "string",
+              "value": "={{ $('Loop Over Items').first().json.description }}"
+            },
+            {
+              "id": "9cff7650-8a0a-4f10-b920-1915fdfae3b6",
+              "name": "community_name",
+              "type": "string",
+              "value": "={{ $('Loop Over Items').first().json.community_name }}"
+            },
+            {
+              "id": "20b7a4ec-5be7-4506-b7f6-17adfd464ef2",
+              "name": "category",
+              "type": "string",
+              "value": "={{ $json.category }}"
+            },
+            {
+              "id": "db43d6dc-49f6-4b1b-96c3-6d440a445aac",
+              "name": "comment",
+              "type": "string",
+              "value": "={{ $json.comment }}"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "c3a8aea8-666b-4ba8-84df-e823000b32ce",
+      "name": "format sentiment",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        2280,
+        340
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "numberInputs": 6
+      },
+      "id": "3bbf6bc0-0036-4979-8d41-38f083c050bd",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        2040,
+        280
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "192dM77Cyn5Gei9GNLTRvQjmATLmKrVX3vyN03E4mW6Q",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/192dM77Cyn5Gei9GNLTRvQjmATLmKrVX3vyN03E4mW6Q/edit?usp=drivesdk",
+          "cachedResultName": "APPLE #WWDC25 Sentiments "
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": 47236189,
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/192dM77Cyn5Gei9GNLTRvQjmATLmKrVX3vyN03E4mW6Q/edit#gid=47236189",
+          "cachedResultName": "Reddit Comments"
+        },
+        "columns": {
+          "value": {},
+          "schema": [
+            {
+              "id": "comment",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "comment",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "user_commenting",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "user_commenting",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "url",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "url",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "description",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "title",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sentimentAnalysis",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "sentimentAnalysis",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "post_id",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "post_id",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "community_name",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "community_name",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "url"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "44a593f9-c88d-47f0-aa84-ea536be00b0b",
+      "name": "Append Sentiments",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        2680,
+        340
+      ],
+      "typeVersion": 4.6
+    },
+    {
+      "parameters": {
+        "inputText": "=title: {{ $('Loop Over Items').first().json.title }}\n\ndescription: {{ $('Loop Over Items').first().json.description }}\n\nComments: {{ $json.comment || \" \"}}",
+        "options": {
+          "categories": "Excited, Disappointed, Impressed, Indifferent, skeptical, Not clear",
+          "systemPromptTemplate": "You are highly intelligent and accurate sentiment analyzer. Analyze the sentiment of the provided text. Categorize it into one of the following: {categories}. Use the provided formatting instructions. Only output the JSON.\n\nYou will try as much to relate he comment to the post to try and get more context of the users sentiment"
+        }
+      },
+      "id": "1dfc378a-b36a-46f7-9223-56c31d31232e",
+      "name": "Sentiment Analysis per comment",
+      "type": "@n8n/n8n-nodes-langchain.sentimentAnalysis",
+      "position": [
+        1580,
+        340
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "04e566e8-020b-44a8-9276-bc387b5a9ce7",
+              "name": "response",
+              "type": "string",
+              "value": "No category"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "01c5edeb-43db-4c8a-aa96-1612d47307f8",
+      "name": "No category",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1100,
+        560
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "82f0938f-9286-41e7-bd12-23cf54595019",
+              "name": "comment",
+              "type": "string",
+              "value": "={{ $json.comment }}"
+            },
+            {
+              "id": "fc67ea4a-6d4f-46b9-ac97-22f3701ef1a0",
+              "name": "user_commenting",
+              "type": "string",
+              "value": "={{ $json.user_commenting }}"
+            },
+            {
+              "id": "157c0517-d139-4ce3-b916-9f03889d4abf",
+              "name": "url",
+              "type": "string",
+              "value": "={{ $json.url }}"
+            },
+            {
+              "id": "d6e441f9-b96d-4f1d-a5ef-235b25e57690",
+              "name": "description",
+              "type": "string",
+              "value": "={{ $('Edit Fields').item.json.description }}"
+            },
+            {
+              "id": "ce00e4eb-26c5-4969-995b-fbe328b49d21",
+              "name": "title",
+              "type": "string",
+              "value": "={{ $('Edit Fields').item.json.title }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c944e25b-9751-4730-a3cb-1c3fe0938144",
+      "name": "edit for Sentiment analysis",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1400,
+        340
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "url": "=https://api.brightdata.com/datasets/v3/progress/{{ $json.snapshot_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer { your api key}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c133ff5d-3477-468c-b741-8a3c864cc08c",
+      "name": "Get status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -180,
+        320
+      ],
+      "typeVersion": 4.2,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "acd98194-7112-4756-9b46-da360559eddb",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              },
+              "leftValue": "={{ $json.sentimentAnalysis }}",
+              "rightValue": "Not clear"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "c34d99ce-005f-432b-ae53-e3ad5e47f548",
+      "name": "Filter",
+      "type": "n8n-nodes-base.filter",
+      "position": [
+        2480,
+        340
+      ],
+      "typeVersion": 2.2,
+      "alwaysOutputData": true
+    }
+  ],
+  "pinData": {
+    "scrap reddit": [
+      {
+        "json": {
+          "snapshot_id": "s_mbubple921vg7kk65x"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "scrap reddit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get data": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Get data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "scrap reddit": {
+      "main": [
+        [
+          {
+            "node": "Get status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Sentiment Analysis per comment",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "edit for Sentiment analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format sentiment": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "format sentiment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Sentiments": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sentiment Analysis per comment": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "No category": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "edit for Sentiment analysis": {
+      "main": [
+        [
+          {
+            "node": "Sentiment Analysis per comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get status": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Append Sentiments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "bf16575b-5f22-45ab-bcec-7399ff2038de",
+  "meta": {
+    "instanceId": "377d98c45abc719f2908da875e2b1b6f50dd844a0ae87f432982fbd04edea496"
+  },
+  "id": "tuUTHywsXlWIyc9Y",
+  "tags": []
+}
